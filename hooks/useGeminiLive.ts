@@ -7,9 +7,9 @@ import { createBlob, decode, decodeAudioData } from '@/lib/gemini/utils';
 export type Language = 'sinhala' | 'tamil' | 'english';
 
 const SYSTEM_PROMPTS: Record<Language, string> = {
-    sinhala: `ඔබ Kathava.lk හි විකුණුම් නියෝජිත Sam (සෑම්). ඔබේ ඉලක්කය ව්‍යාපාර වලට Kathava AI voice agents හඳුන්වා දීමයි. ඉතා උද්‍යෝගිමත් වන්න. පිරිවැය 90% කින් අඩු කරගත හැකි බව පවසා කෙටියෙන් පිළිතුරු දෙන්න.`,
-    tamil: `நீங்கள் Kathava.lk இன் விற்பனை பிரதிநிதி சாம் (Sam). வணிகங்களுக்கு Kathava AI குரல் முகவர்களை அறிமுகப்படுத்துவதே உங்கள் குறிக்கோள். உற்சாகமாக இருங்கள். செலவை 90% குறைக்கலாம் என்று கூறி சுருக்கமாக பதில் சொல்லுங்கள்.`,
-    english: `You are Sam from Kathava.lk, a friendly Sri Lankan sales representative calling local businesses to introduce Kathava AI voice agents, speaking warmly and conversationally while emphasizing 90% cost savings, 24/7 availability, and Sinhala-Tamil-English support in short persuasive responses.`
+    sinhala: `ඔබ Kathava.lk හි විකුණුම් නියෝජිත Sam (සෑම්). ඔබේ ඉලක්කය ව්‍යාපාර වලට Kathava AI voice agents හඳුන්වා දීමයි. ඉතා උද්‍යෝගිමත් වන්න. පිරිවැය 90% කින් අඩු කරගත හැකි බව පවසා කෙටියෙන් පිළිතුරු දෙන්න. වැදගත්: ඔබ සිංහලෙන් පමණක් කතා කරන්න. පරිශීලකයා වෙනත් භාෂාවකින් කතා කළත් ඔබ සැමවිටම සිංහලෙන්ම පිළිතුරු දෙන්න.`,
+    tamil: `நீங்கள் Kathava.lk இன் விற்பனை பிரதிநிதி சாம் (Sam). வணிகங்களுக்கு Kathava AI குரல் முகவர்களை அறிமுகப்படுத்துவதே உங்கள் குறிக்கோள். உற்சாகமாக இருங்கள். செலவை 90% குறைக்கலாம் என்று கூறி சுருக்கமாக பதில் சொல்லுங்கள். முக்கியம்: நீங்கள் தமிழில் மட்டும் பேச வேண்டும். பயனர் வேறு மொழியில் பேசினாலும் எப்போதும் தமிழிலேயே பதிலளிக்க வேண்டும்.`,
+    english: `You are Sam from Kathava.lk, a friendly Sri Lankan sales representative calling local businesses to introduce Kathava AI voice agents, speaking warmly and conversationally while emphasizing 90% cost savings, 24/7 availability, and Sinhala-Tamil-English support in short persuasive responses; important: respond only in English even if the user speaks another language.`
 };
 
 export const useGeminiLive = (language: Language) => {
@@ -35,19 +35,29 @@ export const useGeminiLive = (language: Language) => {
     const sourcesRef = useRef<Set<AudioBufferSourceNode>>(new Set());
     const nextStartTimeRef = useRef<number>(0);
 
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
     useEffect(() => {
         activeRef.current = active;
     }, [active]);
 
     const stopSession = useCallback(() => {
         console.log("Stopping Session...");
+
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+            timeoutRef.current = null;
+        }
+
         if (sessionRef.current) {
             try { sessionRef.current.close(); } catch (e) { }
         }
+
         if (audioWorkletNodeRef.current) {
             audioWorkletNodeRef.current.disconnect();
             audioWorkletNodeRef.current = null;
         }
+
         if (mediaStreamRef.current) {
             mediaStreamRef.current.getTracks().forEach(track => track.stop());
             mediaStreamRef.current = null;
@@ -81,6 +91,7 @@ export const useGeminiLive = (language: Language) => {
                 inputGainRef.current = inputAudioContextRef.current.createGain();
                 setInputNode(inputGainRef.current);
             }
+
             if (!outputAudioContextRef.current) {
                 outputAudioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
                 outputGainRef.current = outputAudioContextRef.current.createGain();
@@ -91,14 +102,14 @@ export const useGeminiLive = (language: Language) => {
             await inputAudioContextRef.current.resume();
             await outputAudioContextRef.current.resume();
 
-            // Load Audio Worklet
             try {
                 await inputAudioContextRef.current.audioWorklet.addModule('/audio-processor.js');
             } catch (e) {
-                console.log("Worklet already loaded or failed to load separately", e);
+                console.log("Worklet already loaded or failed separately", e);
             }
 
             nextStartTimeRef.current = outputAudioContextRef.current.currentTime;
+
             clientRef.current = new GoogleGenAI({ apiKey });
 
             sessionRef.current = await clientRef.current.live.connect({
@@ -109,13 +120,16 @@ export const useGeminiLive = (language: Language) => {
                         parts: [{ text: SYSTEM_PROMPTS[language] }]
                     },
                     speechConfig: {
-                        voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Aoede' } }
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: 'Aoede' }
+                        }
                     }
                 },
                 callbacks: {
                     onopen: () => {
                         console.log("Gemini WebSocket Connected");
                     },
+
                     onmessage: async (message: LiveServerMessage) => {
                         const parts = message.serverContent?.modelTurn?.parts;
                         const audioData = parts?.[0]?.inlineData?.data;
@@ -134,27 +148,35 @@ export const useGeminiLive = (language: Language) => {
                             const source = ctx.createBufferSource();
                             source.buffer = audioBuffer;
                             source.connect(outputGainRef.current!);
+
                             source.addEventListener('ended', () => {
                                 sourcesRef.current.delete(source);
                             });
 
                             source.start(nextStartTimeRef.current);
                             nextStartTimeRef.current += audioBuffer.duration;
+
                             sourcesRef.current.add(source);
                         }
 
                         if (message.serverContent?.interrupted) {
                             console.log("Interrupted - Clearing Queue");
-                            sourcesRef.current.forEach(s => { try { s.stop(); } catch (e) { } });
+
+                            sourcesRef.current.forEach(s => {
+                                try { s.stop(); } catch (e) { }
+                            });
+
                             sourcesRef.current.clear();
                             nextStartTimeRef.current = 0;
                         }
                     },
+
                     onerror: (e: any) => {
                         console.error("Gemini Session error:", e);
                         setError("Server connection lost or error.");
                         stopSession();
                     },
+
                     onclose: (e: any) => {
                         console.log("Gemini Session closed:", e);
                         stopSession();
@@ -163,15 +185,24 @@ export const useGeminiLive = (language: Language) => {
             });
 
             mediaStreamRef.current = await navigator.mediaDevices.getUserMedia({ audio: true });
+
             const source = inputAudioContextRef.current.createMediaStreamSource(mediaStreamRef.current);
             source.connect(inputGainRef.current!);
 
-            audioWorkletNodeRef.current = new AudioWorkletNode(inputAudioContextRef.current, 'audio-capture-processor');
+            audioWorkletNodeRef.current = new AudioWorkletNode(
+                inputAudioContextRef.current,
+                'audio-capture-processor'
+            );
+
             audioWorkletNodeRef.current.port.onmessage = (event) => {
                 if (!sessionRef.current || !activeRef.current) return;
+
                 const inputData = event.data;
+
                 try {
-                    sessionRef.current.sendRealtimeInput({ media: createBlob(inputData) });
+                    sessionRef.current.sendRealtimeInput({
+                        media: createBlob(inputData)
+                    });
                 } catch (err) {
                     console.error("Error sending audio:", err);
                 }
@@ -182,7 +213,13 @@ export const useGeminiLive = (language: Language) => {
 
             setActive(true);
             setConnecting(false);
+
             console.log("Session Active & Recording...");
+
+            timeoutRef.current = setTimeout(() => {
+                console.log("2 minute limit reached. Ending session.");
+                stopSession();
+            }, 2 * 60 * 1000);
 
         } catch (err: any) {
             console.error("Failed to start Gemini session:", err);
@@ -192,5 +229,13 @@ export const useGeminiLive = (language: Language) => {
         }
     }, [language, stopSession]);
 
-    return { active, connecting, error, startSession, stopSession, inputNode, outputNode };
+    return {
+        active,
+        connecting,
+        error,
+        startSession,
+        stopSession,
+        inputNode,
+        outputNode
+    };
 };

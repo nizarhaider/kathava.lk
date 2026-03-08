@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI, LiveServerMessage, Modality, Session } from '@google/genai';
 import { createBlob, decode, decodeAudioData } from '@/lib/gemini/utils';
+import { SendWhatsAppTool } from '@/lib/gemini/tools';
 
 export type Language = 'sinhala' | 'tamil' | 'english';
 
@@ -36,6 +37,7 @@ export const useGeminiLive = (language: Language) => {
     const nextStartTimeRef = useRef<number>(0);
 
     const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const toolsRef = useRef([new SendWhatsAppTool()]);
 
     useEffect(() => {
         activeRef.current = active;
@@ -111,6 +113,11 @@ export const useGeminiLive = (language: Language) => {
             nextStartTimeRef.current = outputAudioContextRef.current.currentTime;
 
             clientRef.current = new GoogleGenAI({ apiKey });
+            console.log("Initializing Gemini Live session with tools:", toolsRef.current.map(t => t.name));
+
+            const functionDeclarations = toolsRef.current.map(
+                (tool) => tool.functionDeclaration,
+            );
 
             sessionRef.current = await clientRef.current.live.connect({
                 model: 'gemini-2.5-flash-native-audio-preview-09-2025',
@@ -121,31 +128,7 @@ export const useGeminiLive = (language: Language) => {
                     },
                     tools: [
                         {
-                            functionDeclarations: [
-                                {
-                                    name: 'send_whatsapp_message',
-                                    description:
-                                        'Send a WhatsApp message to the user with details about Kathava.lk and next steps.',
-                                    // Cast as any to avoid tight coupling to specific
-                                    // @google/genai JSON schema TypeScript enums.
-                                    parameters: {
-                                        type: 'object',
-                                        properties: {
-                                            phone_number: {
-                                                type: 'string',
-                                                description:
-                                                    'User WhatsApp phone number including country code, e.g. +9477XXXXXXX',
-                                            },
-                                            message: {
-                                                type: 'string',
-                                                description:
-                                                    'A short, friendly WhatsApp message summarizing the offer and including any relevant links or next steps.',
-                                            },
-                                        },
-                                        required: ['phone_number', 'message'],
-                                    } as any,
-                                },
-                            ],
+                            functionDeclarations,
                         },
                     ],
                     speechConfig: {
@@ -160,7 +143,10 @@ export const useGeminiLive = (language: Language) => {
                     },
 
                     onmessage: async (message: LiveServerMessage) => {
-                        const parts = message.serverContent?.modelTurn?.parts;
+                        const serverContent: any = (message as any).serverContent;
+
+                        // Handle audio responses
+                        const parts = serverContent?.modelTurn?.parts;
                         const audioData = parts?.[0]?.inlineData?.data;
 
                         if (audioData && outputAudioContextRef.current) {
@@ -188,7 +174,8 @@ export const useGeminiLive = (language: Language) => {
                             sourcesRef.current.add(source);
                         }
 
-                        if (message.serverContent?.interrupted) {
+                        // Handle interruptions
+                        if (serverContent?.interrupted) {
                             console.log("Interrupted - Clearing Queue");
 
                             sourcesRef.current.forEach(s => {
@@ -197,6 +184,59 @@ export const useGeminiLive = (language: Language) => {
 
                             sourcesRef.current.clear();
                             nextStartTimeRef.current = 0;
+                        }
+
+                        // Handle tool calls (function calling)
+                        const toolCall = serverContent?.toolCall;
+                        const functionCalls = toolCall?.functionCalls as any[] | undefined;
+
+                        if (functionCalls && functionCalls.length && sessionRef.current) {
+                            console.log("Received tool calls from Gemini:", functionCalls);
+                            const functionResponses: any[] = [];
+
+                            for (const fc of functionCalls) {
+                                const { id, name, args } = fc;
+                                const tool = toolsRef.current.find(t => t.name === name);
+
+                                if (!tool) {
+                                    console.warn(`No tool registered for function ${name}`);
+                                    continue;
+                                }
+
+                                console.log(`Executing tool "${name}" with id=${id} and args:`, args);
+
+                                try {
+                                    const result = await tool.functionToCall(args);
+                                    console.log(`Tool "${name}" completed for id=${id} with result:`, result);
+
+                                    functionResponses.push({
+                                        id,
+                                        name,
+                                        response: result ?? {},
+                                    });
+                                } catch (err: any) {
+                                    console.error(`Error executing tool ${name} (id=${id}):`, err);
+                                    functionResponses.push({
+                                        id,
+                                        name,
+                                        response: {
+                                            error: err?.message ?? 'Tool execution failed',
+                                        },
+                                    });
+                                }
+                            }
+
+                            if (functionResponses.length) {
+                                console.log("Sending tool responses back to Gemini:", functionResponses);
+                                try {
+                                    await (sessionRef.current as any).sendToolResponse({
+                                        functionResponses,
+                                    });
+                                    console.log("Successfully sent tool responses to Gemini");
+                                } catch (err) {
+                                    console.error("Failed to send tool responses:", err);
+                                }
+                            }
                         }
                     },
 

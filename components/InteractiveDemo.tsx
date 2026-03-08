@@ -11,7 +11,7 @@ const InteractiveDemo = () => {
     const { active, connecting, error, startSession, stopSession, inputNode, outputNode } = useGeminiLive(language);
 
     return (
-        <div id="demo" className="max-w-5xl mx-auto rounded-[3rem] border border-white/10 bg-slate-950 shadow-[0_0_100px_rgba(59,130,246,0.1)] relative z-10 text-white overflow-hidden min-h-[650px] flex flex-col items-center justify-center p-8 md:p-16">
+        <div id="demo" className="max-w-5xl mx-auto rounded-[2rem] sm:rounded-[3rem] border border-white/10 bg-slate-950 shadow-[0_0_100px_rgba(59,130,246,0.1)] relative z-10 text-white overflow-hidden min-h-[550px] sm:min-h-[650px] flex flex-col items-center justify-center p-6 sm:p-12 md:p-16">
 
             {/* 3D Audio Orb Visualizer - Full Background Coverage */}
             <div className="absolute inset-0 z-0 opacity-60">
@@ -48,8 +48,8 @@ const InteractiveDemo = () => {
                             onClick={() => !active && setLanguage(lang)}
                             disabled={active}
                             className={`group flex items-center gap-2 px-6 py-2.5 rounded-2xl text-[11px] font-bold transition-all border uppercase tracking-wider ${language === lang
-                                    ? 'bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-500/20 scale-105'
-                                    : 'bg-white/5 border-white/10 text-slate-500 hover:bg-white/10 hover:text-white'
+                                ? 'bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-500/20 scale-105'
+                                : 'bg-white/5 border-white/10 text-slate-500 hover:bg-white/10 hover:text-white'
                                 } ${active && language !== lang ? 'opacity-30' : 'opacity-100'}`}
                         >
                             <Globe size={14} className={language === lang ? 'text-white' : 'text-slate-600 group-hover:text-blue-400'} />
@@ -86,8 +86,8 @@ const InteractiveDemo = () => {
                             onClick={active ? stopSession : startSession}
                             disabled={connecting}
                             className={`relative z-10 w-32 h-32 rounded-full flex items-center justify-center transition-all duration-700 backdrop-blur-md border border-white/20 ${active
-                                    ? 'bg-red-500/90 shadow-[0_0_60px_rgba(239,68,68,0.4)]'
-                                    : 'bg-blue-600/90 hover:scale-110 shadow-[0_0_60px_rgba(37,99,235,0.3)]'
+                                ? 'bg-red-500/90 shadow-[0_0_60px_rgba(239,68,68,0.4)]'
+                                : 'bg-blue-600/90 hover:scale-110 shadow-[0_0_60px_rgba(37,99,235,0.3)]'
                                 }`}
                         >
                             {connecting ? (

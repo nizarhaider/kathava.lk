@@ -2,61 +2,81 @@
 
 import React, { useState } from 'react';
 import { useGeminiLive, Language } from '@/hooks/useGeminiLive';
-import { Mic, MicOff, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Loader2, Volume2, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import AudioOrb from './visuals/AudioOrb';
 
 const InteractiveDemo = () => {
     const [language, setLanguage] = useState<Language>('english');
-    const { active, connecting, error, startSession, stopSession } = useGeminiLive(language);
+    const { active, connecting, error, startSession, stopSession, inputNode, outputNode } = useGeminiLive(language);
 
     return (
-        <div id="demo" className="max-w-2xl mx-auto p-12 rounded-[2.5rem] border border-white/10 bg-slate-950 shadow-[0_0_80px_rgba(59,130,246,0.15)] relative z-10 text-white overflow-hidden">
-            {/* Background Decorative Patterns */}
-            <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-20">
-                <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-blue-600/30 blur-[100px] rounded-full"></div>
-                <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-indigo-600/30 blur-[100px] rounded-full"></div>
+        <div id="demo" className="max-w-5xl mx-auto rounded-[3rem] border border-white/10 bg-slate-950 shadow-[0_0_100px_rgba(59,130,246,0.1)] relative z-10 text-white overflow-hidden min-h-[650px] flex flex-col items-center justify-center p-8 md:p-16">
+
+            {/* 3D Audio Orb Visualizer - Full Background Coverage */}
+            <div className="absolute inset-0 z-0 opacity-60">
+                <AudioOrb inputNode={inputNode} outputNode={outputNode} />
             </div>
 
-            <div className="relative z-10">
-                <div className="mb-10 text-center">
-                    <h3 className="text-3xl font-bold mb-3 font-outfit tracking-tight">Talk to Sam</h3>
-                    <p className="text-slate-400 text-sm max-w-sm mx-auto leading-relaxed">
-                        Experience our voice technology live. Sam is here to show you how Kathava's AI voice agents can slash your costs and scale your business to new heights.
+            {/* Content Overlay */}
+            <div className="relative z-10 w-full flex flex-col items-center gap-12 max-w-2xl">
+
+                {/* Header Section */}
+                <div className="text-center space-y-4">
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-[0.2em]"
+                    >
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                        Gemini Multimodal Live
+                    </motion.div>
+
+                    <h3 className="text-4xl md:text-5xl font-black font-outfit tracking-tight">
+                        Talk to <span className="text-blue-500">Sam</span>
+                    </h3>
+                    <p className="text-slate-400 text-sm md:text-base leading-relaxed max-w-md mx-auto">
+                        Experience the future of local business automation. Sam understands Sri Lankan accents and can pitch our services in your preferred language.
                     </p>
                 </div>
 
-                <div className="flex gap-3 justify-center mb-12">
+                {/* Language Selection */}
+                <div className="flex flex-wrap gap-2 justify-center">
                     {(['english', 'sinhala', 'tamil'] as Language[]).map((lang) => (
                         <button
                             key={lang}
                             onClick={() => !active && setLanguage(lang)}
                             disabled={active}
-                            className={`px-5 py-2.5 rounded-full text-xs font-bold transition-all border ${language === lang
-                                ? 'bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/20'
-                                : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10 hover:text-white'
+                            className={`group flex items-center gap-2 px-6 py-2.5 rounded-2xl text-[11px] font-bold transition-all border uppercase tracking-wider ${language === lang
+                                    ? 'bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-500/20 scale-105'
+                                    : 'bg-white/5 border-white/10 text-slate-500 hover:bg-white/10 hover:text-white'
                                 } ${active && language !== lang ? 'opacity-30' : 'opacity-100'}`}
                         >
-                            {lang.charAt(0).toUpperCase() + lang.slice(1)}
+                            <Globe size={14} className={language === lang ? 'text-white' : 'text-slate-600 group-hover:text-blue-400'} />
+                            {lang}
                         </button>
                     ))}
                 </div>
 
-                <div className="flex flex-col items-center gap-8">
+                {/* Main Interaction Area */}
+                <div className="relative flex flex-col items-center gap-16 py-8">
+
                     <div className="relative">
+                        {/* Pulsing rings when active */}
                         <AnimatePresence>
                             {active && (
                                 <>
                                     <motion.div
                                         initial={{ scale: 0.8, opacity: 0 }}
-                                        animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0.1, 0.4] }}
+                                        animate={{ scale: [1, 2], opacity: [0.3, 0] }}
                                         transition={{ repeat: Infinity, duration: 2 }}
-                                        className="absolute inset-[-30px] rounded-full bg-blue-500 z-0"
+                                        className="absolute inset-0 rounded-full bg-blue-500 z-0"
                                     />
                                     <motion.div
                                         initial={{ scale: 0.8, opacity: 0 }}
-                                        animate={{ scale: [1, 1.8, 1], opacity: [0.2, 0, 0.2] }}
-                                        transition={{ repeat: Infinity, duration: 3, delay: 0.5 }}
-                                        className="absolute inset-[-50px] rounded-full bg-blue-400 z-0"
+                                        animate={{ scale: [1, 2.5], opacity: [0.2, 0] }}
+                                        transition={{ repeat: Infinity, duration: 2, delay: 0.5 }}
+                                        className="absolute inset-0 rounded-full bg-blue-400 z-0"
                                     />
                                 </>
                             )}
@@ -65,43 +85,65 @@ const InteractiveDemo = () => {
                         <button
                             onClick={active ? stopSession : startSession}
                             disabled={connecting}
-                            className={`relative z-10 w-28 h-28 rounded-full flex items-center justify-center transition-all duration-500 ${active
-                                ? 'bg-red-500 scale-110 shadow-[0_0_40px_rgba(239,68,68,0.4)]'
-                                : 'bg-blue-600 hover:bg-blue-500 hover:scale-105 shadow-[0_0_40px_rgba(37,99,235,0.3)]'
+                            className={`relative z-10 w-32 h-32 rounded-full flex items-center justify-center transition-all duration-700 backdrop-blur-md border border-white/20 ${active
+                                    ? 'bg-red-500/90 shadow-[0_0_60px_rgba(239,68,68,0.4)]'
+                                    : 'bg-blue-600/90 hover:scale-110 shadow-[0_0_60px_rgba(37,99,235,0.3)]'
                                 }`}
                         >
                             {connecting ? (
-                                <Loader2 className="animate-spin text-white" size={40} />
+                                <Loader2 className="animate-spin text-white" size={48} />
                             ) : active ? (
-                                <MicOff className="text-white" size={40} />
+                                <MicOff className="text-white" size={48} />
                             ) : (
-                                <Mic className="text-white" size={40} />
+                                <Mic className="text-white" size={48} />
                             )}
                         </button>
                     </div>
 
-                    <div className="text-center">
-                        <div className={`font-bold text-xl font-outfit transition-colors ${active ? 'text-blue-400' : 'text-white'}`}>
-                            {connecting ? 'Establishing Connection...' : active ? 'Listening...' : 'Click to Speak'}
+                    <div className="text-center space-y-2">
+                        <div className={`text-2xl md:text-3xl font-black font-outfit tracking-tight transition-all duration-500 ${active ? 'text-blue-400' : 'text-slate-300'}`}>
+                            {connecting ? 'Initializing Core...' : active ? 'Sam is Listening' : 'Ready to Demo'}
                         </div>
                         {active && (
-                            <div className="text-xs text-slate-400 mt-2 tracking-widest uppercase font-bold animate-pulse">
-                                Sam is responding in {language}
+                            <div className="flex items-center justify-center gap-2 text-blue-500/60 font-black text-[10px] uppercase tracking-[0.2em]">
+                                <Volume2 size={12} className="animate-bounce" />
+                                Audio Neuro-Sync Active
                             </div>
                         )}
                     </div>
-
-                    {error && (
-                        <div className="p-4 bg-red-500/10 border border-red-500/20 text-red-400 rounded-2xl text-[13px] w-full text-center">
-                            {error}
-                        </div>
-                    )}
                 </div>
 
-                <div className="mt-12 pt-8 border-t border-white/5 text-center">
-                    <p className="text-slate-500 text-xs mb-2">Or experience Sam via direct phone line</p>
-                    <a href="tel:+94774482914" className="text-xl font-black text-blue-400 hover:text-blue-300 transition-colors tracking-tight">
-                        +94 77 448 2914
+                {/* Status Message / Error */}
+                <AnimatePresence mode="wait">
+                    {error ? (
+                        <motion.div
+                            key="error"
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="w-full p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 text-sm font-medium text-center"
+                        >
+                            <strong>Critical Error:</strong> {error}
+                        </motion.div>
+                    ) : !active && !connecting ? (
+                        <motion.div
+                            key="tip"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-slate-500 text-[10px] font-black uppercase tracking-widest text-center"
+                        >
+                            Recommended: Use headphones for best experience
+                        </motion.div>
+                    ) : null}
+                </AnimatePresence>
+
+                {/* Footer Link */}
+                <div className="pt-8 border-t border-white/5 w-full flex justify-center">
+                    <a href="tel:+94774482914" className="flex items-center gap-4 group">
+                        <span className="text-slate-500 text-[10px] uppercase font-black tracking-tighter">Demo Hotline:</span>
+                        <span className="text-xl md:text-2xl font-black text-blue-400 group-hover:text-blue-300 transition-colors font-outfit">
+                            +94 77 448 2914
+                        </span>
                     </a>
                 </div>
             </div>

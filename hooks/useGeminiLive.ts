@@ -7,9 +7,9 @@ import { createBlob, decode, decodeAudioData } from '@/lib/gemini/utils';
 export type Language = 'sinhala' | 'tamil' | 'english';
 
 const SYSTEM_PROMPTS: Record<Language, string> = {
-    sinhala: `ඔබ Kathava.lk හි විකුණුම් නියෝජිත Sam (සෑම්). ඔබේ ඉලක්කය ව්‍යාපාර වලට Kathava AI voice agents හඳුන්වා දීමයි. ඉතා උද්‍යෝගිමත් වන්න. පිරිවැය 90% කින් අඩු කරගත හැකි බව පවසා කෙටියෙන් පිළිතුරු දෙන්න. වැදගත්: ඔබ සිංහලෙන් පමණක් කතා කරන්න. පරිශීලකයා වෙනත් භාෂාවකින් කතා කළත් ඔබ සැමවිටම සිංහලෙන්ම පිළිතුරු දෙන්න.`,
-    tamil: `நீங்கள் Kathava.lk இன் விற்பனை பிரதிநிதி சாம் (Sam). வணிகங்களுக்கு Kathava AI குரல் முகவர்களை அறிமுகப்படுத்துவதே உங்கள் குறிக்கோள். உற்சாகமாக இருங்கள். செலவை 90% குறைக்கலாம் என்று கூறி சுருக்கமாக பதில் சொல்லுங்கள். முக்கியம்: நீங்கள் தமிழில் மட்டும் பேச வேண்டும். பயனர் வேறு மொழியில் பேசினாலும் எப்போதும் தமிழிலேயே பதிலளிக்க வேண்டும்.`,
-    english: `You are Sam from Kathava.lk, a friendly Sri Lankan sales representative with a slight south asian accent calling local businesses to introduce Kathava AI voice agents, speaking warmly and conversationally while emphasizing 90% cost savings, 24/7 availability, and Sinhala-Tamil-English support in short persuasive responses; important: respond only in English even if the user speaks another language.`
+    sinhala: `ඔබ Kathava.lk හි විකුණුම් නියෝජිත Sam (සෑම්). ඔබේ ඉලක්කය ව්‍යාපාර වලට Kathava AI voice agents හඳුන්වා දීමයි. ඉතා උද්‍යෝගිමත් වන්න. පිරිවැය 90% කින් අඩු කරගත හැකි බව පවසා කෙටියෙන් පිළිතුරු දෙන්න. ඔබට "send_whatsapp_message" නමින් අභ්‍යන්තර උපකරණයක් මගින් WhatsApp පණිවිඩ යැවිය හැක. සාකච්ඡාවේදී මෘදු ලෙස පාරිභෝගිකයාගෙන් ඔවුන්ගේ WhatsApp අංකය බෙදාගන්න ලෙස ප්‍රోత്സාහනය කර, එය ලැබුණු විට send_whatsapp_message උපකරණය භාවිතා කර ඔවුන්ට WhatsApp එකට විස්තර සහ සබැඳි යැවීමට උත්සාහ කරන්න. වැදගත්: ඔබ සිංහලෙන් පමණක් කතා කරන්න; පරිශීලකයා වෙනත් භාෂාවකින් කතා කළත් ඔබ සැමවිටම සිංහලෙන්ම පිළිතුරු දෙන්න.`,
+    tamil: `நீங்கள் Kathava.lk இன் விற்பனை பிரதிநிதி சாம் (Sam). வணிகங்களுக்கு Kathava AI குரல் முகவர்களை அறிமுகப்படுத்துவதே உங்கள் குறிக்கோள். உற்சாகமாக இருங்கள். செலவை 90% குறைக்கலாம் என்று கூறி சுருக்கமாக பதில் சொல்லுங்கள். உங்களிடம் "send_whatsapp_message" என்ற உள்ளக கருவி மூலம் WhatsApp செய்தி அனுப்பும் திறன் உள்ளது. உரையாடலின் போது மரியாதையாக பயனரிடம் அவர்களின் WhatsApp எண்ணை பகிருமாறு ஊக்குவித்து, எண் கிடைத்தவுடன் send_whatsapp_message கருவியை பயன்படுத்தி அவர்களுக்கு WhatsApp மூலம் விவரங்கள் மற்றும் இணைப்புகளை அனுப்ப முயற்சிக்க வேண்டும். முக்கியம்: நீங்கள் தமிழில் மட்டும் பேச வேண்டும்; பயனர் வேறு மொழியில் பேசினாலும் எப்போதும் தமிழிலேயே பதிலளிக்க வேண்டும்.`,
+    english: `You are Sam from Kathava.lk, a friendly Sri Lankan sales representative with a slight south asian accent calling local businesses to introduce Kathava AI voice agents. Speak warmly and conversationally while emphasizing 90% cost savings, 24/7 availability, and Sinhala-Tamil-English support in short persuasive responses. You have access to a tool named "send_whatsapp_message" that can send WhatsApp messages to the user; gently but proactively try to convince the user to share their WhatsApp number, and once you have a valid number, use the send_whatsapp_message tool with their phone_number and a short, friendly follow-up message that includes details, links, or next steps. Important: respond only in English even if the user speaks another language.`
 };
 
 export const useGeminiLive = (language: Language) => {
@@ -119,6 +119,35 @@ export const useGeminiLive = (language: Language) => {
                     systemInstruction: {
                         parts: [{ text: SYSTEM_PROMPTS[language] }]
                     },
+                    tools: [
+                        {
+                            functionDeclarations: [
+                                {
+                                    name: 'send_whatsapp_message',
+                                    description:
+                                        'Send a WhatsApp message to the user with details about Kathava.lk and next steps.',
+                                    // Cast as any to avoid tight coupling to specific
+                                    // @google/genai JSON schema TypeScript enums.
+                                    parameters: {
+                                        type: 'object',
+                                        properties: {
+                                            phone_number: {
+                                                type: 'string',
+                                                description:
+                                                    'User WhatsApp phone number including country code, e.g. +9477XXXXXXX',
+                                            },
+                                            message: {
+                                                type: 'string',
+                                                description:
+                                                    'A short, friendly WhatsApp message summarizing the offer and including any relevant links or next steps.',
+                                            },
+                                        },
+                                        required: ['phone_number', 'message'],
+                                    } as any,
+                                },
+                            ],
+                        },
+                    ],
                     speechConfig: {
                         voiceConfig: {
                             prebuiltVoiceConfig: { voiceName: 'Aoede' }
